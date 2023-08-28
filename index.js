@@ -1,6 +1,6 @@
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = process.env.PORT || 5000;
 const cors = require('cors');
@@ -27,6 +27,30 @@ async function run() {
         await client.connect();
 
 
+        const productCollection = client.db('fakeAmazonDB').collection('products');
+
+        // get all products
+        app.get('/products', async (req, res) => {
+            const page = parseInt(req.query.page) || 0;
+            const limit = parseInt(req.query.limit) || 12;
+            const skip = page * limit;
+            const result = await productCollection.find().skip(skip).limit(limit).toArray();
+            res.send(result);
+        });
+
+        // get total number of products 
+        app.get('/productCount', async (req, res) => {
+            const result = await productCollection.estimatedDocumentCount();
+            res.send({ totalProducts: result });
+        });
+
+        app.post('/cartProducts', async (req, res) => {
+            const cartItemsId = req.body;
+            const object_Id = cartItemsId.map(item => new ObjectId(item));
+            const query = { _id: { $in: object_Id } };
+            const result = await productCollection.find(query).toArray();
+            res.send(result);
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
